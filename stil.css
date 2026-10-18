@@ -386,4 +386,4 @@ details[open] .plyus::after { transform: rotate(0); }
 @media (max-width: 560px) { .schet { grid-template-columns: 1fr 1fr; } .schet b { font-size: 38px; } }
 @media (max-width: 560px) { .nishi { grid-template-columns: 1fr; } }
 /* счётчики — сразу под первым экраном, но не в нём: на ПК первый экран занимает всю высоту окна (порог слов детектора) */
-@media (min-width: 901px) { .geroj { min-height: calc(100svh - 64px); display: flex; align-items: center; } .geroj > .ramka { width: 100%; } }
+@media (min-width: 901px) { .geroj { min-height: calc(100svh - 64px); display: flex; align-items: center; } .geroj > .ramka { width: min(1200px, 100% - 2 * var(--polya)); } }
