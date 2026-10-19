@@ -177,8 +177,9 @@
     // раскладка подписи кружка: термин и строки смысла. ПК — справа от кружка, по центру блока; телефон — под кружком (от cyr).
     function podpisi(i, ryad, W, cxr, tw = 290) {
       cx.font = shr(650, ryad ? 12 : 14);
-      const A = ryad ? stroki(H.schritte[i], tw / 4 - 6) : stroki(H.schritte[i], W - (cxr + 32) - 4);
-      if (ryad) return { stroki: A, yTermina: 0 + 40, yStrok: 56 };
+      // 19-10 №10: на телефоне — сетка 2×2, подпись справа от кружка (в ряд по четыре длинные термины слипались)
+      const A = ryad ? stroki(H.schritte[i], tw / 2 - 40 - 4) : stroki(H.schritte[i], W - (cxr + 32) - 4);
+      if (ryad) return { stroki: A, yTermina: -12, yStrok: 4 };
       const cyr = 20 + 140 + i * 78, vys = 14 + A.length * 18, verh = cyr - vys / 2;
       return { stroki: A, yTermina: verh + 10, yStrok: verh + 14 + 14 };
     }
@@ -193,7 +194,7 @@
       if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(Hh * dpr); }
       cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, W, Hh);
       const ryad = W < 480;                       // телефон: рельс строкой под телефоном
-      const tw = ryad ? Math.min(290, W - 48) : 290, th = ryad ? Hh - 150 : 500;
+      const tw = ryad ? Math.min(290, W - 48) : 290, th = ryad ? Hh - 170 : 500;
       const tx = ryad ? (W - tw) / 2 : 40, ty = 20;
       // корпус
       cx.save(); cx.shadowColor = 'rgba(2,6,14,.55)'; cx.shadowBlur = 24; cx.shadowOffsetY = 10;
@@ -224,22 +225,22 @@
       const n = 4;
       for (let i = 0; i < n; i++) {
         const gor = sek >= RELS[i];
-        const [cxr, cyr] = ryad ? [tx + tw * (i + 0.5) / n, ty + th + 34] : [tx + tw + 48, ty + 140 + i * 78];
-        cx.beginPath(); cx.arc(cxr, cyr, 22, 0, 7); cx.fillStyle = gor ? C.akc : C.fon; cx.fill();
+        const [cxr, cyr] = ryad ? [tx + (i % 2) * tw / 2 + 18, ty + th + 38 + Math.floor(i / 2) * 68] : [tx + tw + 48, ty + 140 + i * 78];
+        cx.beginPath(); cx.arc(cxr, cyr, ryad ? 17 : 22, 0, 7); cx.fillStyle = gor ? C.akc : C.fon; cx.fill();
         cx.lineWidth = 2; cx.strokeStyle = gor ? C.akc : C.lin; cx.stroke();
         cx.fillStyle = gor ? C.naAkc : C.tekst; cx.font = shr(800, 17); cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('IVAN'[i], cxr, cyr + 1);
         cx.textBaseline = 'alphabetic';
         const L = podpisi(i, ryad, W, cxr, tw);
-        cx.textAlign = ryad ? 'center' : 'left';
+        cx.textAlign = 'left';
+        const tx2 = ryad ? cxr + 26 : cxr + 32;
         cx.fillStyle = C.akc; cx.font = shr(750, ryad ? 10 : 11); try { cx.letterSpacing = '0.06em'; } catch (e) {}
         // термины теперь на языке страницы и бывают длинными («BENACHRICHTIGUNG»): не шире места — иначе уменьшить
-        const termin = D.termy[i].toUpperCase(), mesto = ryad ? tw / 4 - 2 : W - (cxr + 32) - 4, shir = cx.measureText(termin).width;
+        const termin = D.termy[i].toUpperCase(), mesto = ryad ? tw / 2 - 40 - 4 : W - (cxr + 32) - 4, shir = cx.measureText(termin).width;
         if (shir > mesto) cx.font = shr(750, Math.max(8, Math.floor((ryad ? 10 : 11) * mesto / shir * 10) / 10));
-        cx.fillText(termin, ryad ? cxr : cxr + 32, (ryad ? cyr : 0) + L.yTermina);
+        cx.fillText(termin, tx2, (ryad ? cyr : 0) + L.yTermina);
         try { cx.letterSpacing = '0px'; } catch (e) {}
         cx.fillStyle = gor ? C.tekst : C.t2; cx.font = shr(650, ryad ? 12 : 14);
-        L.stroki.forEach((s, j) => cx.fillText(s, ryad ? cxr : cxr + 32, (ryad ? cyr : 0) + L.yStrok + j * (ryad ? 15 : 18)));
-        cx.textAlign = 'left';
+        L.stroki.forEach((s, j) => cx.fillText(s, tx2, (ryad ? cyr : 0) + L.yStrok + j * (ryad ? 15 : 18)));
       }
     }
     function igrat(ts) { if (!t0) t0 = ts; const sek = (ts - t0) / 1000; kadr(sek); if (sek < KONEC) raf = requestAnimationFrame(igrat); else { raf = 0; cv.setAttribute('aria-busy', 'false'); } }
@@ -308,18 +309,26 @@
   // один показ, когда глава впервые видна — чтобы она не стояла пустой; дальше только по кнопке
   if ('IntersectionObserver' in window) { const io2 = new IntersectionObserver(z => { if (z[0].isIntersecting) { io2.disconnect(); pusk(); } }, { threshold: .4 }); io2.observe($('#uzly')); }
 
+  // 19-10 №11 п. 3: содержимое глав при первом показе мягко проявляется — один раз. Прячется только то, что при загрузке
+  // ниже окна (видимое сразу не мигает); «меньше движения» и браузер без IntersectionObserver — без проявления.
+  if (!tiho && 'IntersectionObserver' in window) {
+    const io5 = new IntersectionObserver(z => z.forEach(x => { if (x.isIntersecting) { x.target.classList.add('vidno'); io5.unobserve(x.target); } }), { rootMargin: '0px 0px -6% 0px' });
+    $$('main section:not(#geroj) .ramka > *').forEach(el => { if (el.getBoundingClientRect().top > innerHeight) { el.classList.add('poyav'); io5.observe(el); } });
+  }
+
   // глава 5: шаблоны по нишам — крупный снимок в диалоге, не уходя со страницы. Без JS ссылка открывает сам снимок.
   // Esc и «Закрыть» закрывают, щелчок мимо снимка — тоже; фокус возвращается на карточку, с которой открыли.
   const lupa = $('#lupa');
   if (lupa && lupa.showModal) {
-    const vse = $$('.shablon'), img = $('#lupa-img');
+    const vse = $$('.otkr-cuma, .shablon'), img = $('#lupa-img'), skrol = $('#lupa-skrol');   // 19-10 №11 п. 6: Cuma — в том же окне
     let otkuda = null, tek = 0;
     // показать шаблон n: старый снимок сбрасывается сразу, новый появляется, когда загрузился (не старый под новым названием)
     const pokazat = n => {
       tek = (n + vse.length) % vse.length; const a = vse[tek];
       img.removeAttribute('src'); img.classList.add('gruzitsya');
       img.onload = () => img.classList.remove('gruzitsya');
-      img.src = a.getAttribute('href'); $('#lupa-n').textContent = a.dataset.n;
+      img.src = a.dataset.cel || a.getAttribute('href'); $('#lupa-n').textContent = a.dataset.n; skrol.scrollTop = 0;
+      $('#lupa-pr').hidden = a.classList.contains('otkr-cuma');   // «имена и цифры — примеры» — у шаблонов, не у сайта клиента
     };
     vse.forEach((a, n) => a.addEventListener('click', ev => {
       ev.preventDefault(); otkuda = a; pokazat(n);
@@ -330,6 +339,16 @@
     lupa.addEventListener('keydown', ev => { if (ev.key === 'ArrowLeft') { ev.preventDefault(); pokazat(tek - 1); } else if (ev.key === 'ArrowRight') { ev.preventDefault(); pokazat(tek + 1); } });
     $('#lupa-x').addEventListener('click', () => lupa.close());
     lupa.addEventListener('click', ev => { if (ev.target === lupa) lupa.close(); });
+    // лента шаблонов: кнопки ← → листают на ширину видимого, у краёв гаснут; пальцем и колесом — как обычно
+    const lenta = $('#lenta-sp');
+    if (lenta) {
+      const [kl, kp] = [$('.lenta-l'), $('.lenta-p')];
+      const kraya = () => { const est = lenta.scrollWidth > lenta.clientWidth + 2; kl.hidden = kp.hidden = !est;
+        kl.disabled = lenta.scrollLeft < 6; kp.disabled = lenta.scrollLeft + lenta.clientWidth > lenta.scrollWidth - 6; };
+      kl.addEventListener('click', () => lenta.scrollBy({ left: -lenta.clientWidth * .8, behavior: tiho ? 'auto' : 'smooth' }));
+      kp.addEventListener('click', () => lenta.scrollBy({ left: lenta.clientWidth * .8, behavior: tiho ? 'auto' : 'smooth' }));
+      lenta.addEventListener('scroll', kraya, { passive: true }); addEventListener('resize', kraya); kraya();
+    }
     // фокус возвращается на карточку того шаблона, что был открыт последним (если она в свёрнутом — на ту, с которой открыли)
     lupa.addEventListener('close', () => { const k = vse[tek]; (k && k.checkVisibility && k.checkVisibility() ? k : otkuda)?.focus(); });
   }
