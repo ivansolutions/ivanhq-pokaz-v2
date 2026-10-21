@@ -908,3 +908,40 @@ details[open] > summary .plyus { transform: rotate(180deg); }
 }
 .lenta .shablon-n { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }   /* полное название — в окне просмотра и aria-label */
 @media (max-width: 359px) { .forma-niz .knopka-bol { white-space: normal; font-size: 15px; padding: 8px 16px; } }   /* 320: перенос разрешён, иначе кнопка распирает страницу */
+
+/* 20-10 №12 · эффекты заметно, но со вкусом («ничего не заметил нового» — подъём 2 px и проявление 12 px глазу не видны).
+   п. 1 · свет из логотипа: мягкое пятно (640 px) за курсором на первом экране и в двух тёмных главах; без курсора — дышит у сцены IVAN.
+   Слой — позади текста (isolation + z-index −1), двигается только transform — 60 к/с. Ставит app.js; телефон и «меньше движения» — без. */
+.svet { position: relative; isolation: isolate; }
+.svet-sloj { position: absolute; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; }
+.svet-pyatno { position: absolute; left: 0; top: 0; width: 640px; height: 640px; margin: -320px 0 0 -320px; border-radius: 50%;
+  background: radial-gradient(circle closest-side, var(--svet-c) 0%, color-mix(in srgb, var(--svet-c) 55%, transparent) 38%, transparent 100%); will-change: transform; }
+#geroj .svet-sloj { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 160px); mask-image: linear-gradient(to bottom, transparent 0, #000 160px); }   /* под шапкой — без среза */
+.svet { --svet-c: rgba(30, 86, 214, .2); }
+html[data-tema="sinyaya"] .svet, .glava-temn.svet, .forma-gl.svet { --svet-c: rgba(143, 208, 255, .26); }
+.svet.dyshit .svet-pyatno { animation: svet-dyshit 6s ease-in-out infinite; }
+@keyframes svet-dyshit { 0%, 100% { scale: .82; opacity: .75; } 50% { scale: 1.12; opacity: 1; } }
+/* п. 2 · заголовок главы при первом показе: слова проявляются по очереди (снизу, 70 мс между словами), под ним прорисовывается
+   синяя черта. Черта — абсолютно, высоту заголовка не меняет (глава = окно). Скрыты до показа только главы ниже окна. */
+.zagl-slova { position: relative; }
+.zagl-slova .slovo { display: inline-block; }
+.zagl-slova::after { content: ""; position: absolute; left: 0; bottom: -10px; width: 72px; height: 3px; border-radius: 999px; background: var(--akc); }
+.glava-temn .zagl-slova::after, .forma-gl .zagl-slova::after { background: #8FD0FF; }
+.zagl-slova.zhdyot .slovo { opacity: 0; transform: translateY(.45em); }
+.zagl-slova.zhdyot::after { transform: scaleX(0); }
+.zagl-slova.idyot .slovo { transition: opacity .5s ease, transform .5s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--i) * 70ms); }
+.zagl-slova.idyot::after { transform-origin: left; transition: transform .7s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--n) * 70ms + .1s); }
+/* п. 3 · наведение (только мышь): карточки, плитки, шаблоны поднимаются на 7 px с синим свечением тени (вместо 2 px из №11) */
+@media (hover: hover) and (pointer: fine) {
+  .nishi li, .pakety li, .pary li, .tri li, .bukvy li, .mehr li, .shablon-kadr, .otkr-cuma .noutbuk { transition: transform .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s ease, border-color .15s; }
+  .nishi li:hover, .pakety li:hover, .pary li:hover, .tri li:hover, .bukvy li:hover, .mehr li:hover, .shablon:hover .shablon-kadr, .otkr-cuma:hover .noutbuk {
+    transform: translateY(-7px); box-shadow: var(--ten-2), 0 18px 36px -14px rgba(30, 86, 214, .45); }
+  html[data-tema="sinyaya"] :is(.nishi li, .pakety li, .pary li, .tri li, .bukvy li, .mehr li):hover, .glava-temn :is(.nishi li, .pakety li, .pary li, .tri li, .bukvy li, .mehr li):hover,
+  html[data-tema="sinyaya"] .shablon:hover .shablon-kadr { box-shadow: var(--ten-2), 0 18px 40px -12px rgba(143, 208, 255, .38); }
+}
+/* лента шаблонов едет сама (app.js): пока едет — без прилипания к карточке, иначе прилипание дёргает её назад */
+.lenta .shablony.edet-sama { scroll-snap-type: none; scroll-behavior: auto; }
+.lenta .shablony > li { padding-top: 8px; }   /* место для подъёма 7 px — лента обрезает по краю прокрутки… */
+.lenta .shablony { margin-top: -8px; }          /* …а глава от этого не выше (глава = окно, proba-okno 20-10: было +8 px) */
+@media (prefers-reduced-motion: reduce) { .svet-sloj { display: none; } .zagl-slova .slovo, .zagl-slova::after { opacity: 1 !important; transform: none !important; transition: none !important; } }
+@media (max-width: 767px) { .svet-sloj { display: none; } }

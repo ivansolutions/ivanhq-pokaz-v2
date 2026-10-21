@@ -367,6 +367,76 @@
     }
   }
 
+  // 20-10 №12: эффекты заметные. Телефон (< 768) и «меньше движения» — без пятна и без самоходной ленты; заголовки — просто видны.
+  const shiroko = matchMedia('(min-width: 768px)').matches, mysh = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  // п. 1 · свет из логотипа: пятно идёт за курсором с запаздыванием (12 % пути за 1/60 с); курсор ушёл — возвращается к сцене IVAN
+  // и дышит (в тёмных главах — к заголовку, без дыхания: одна вечная анимация на странице, не три). Двигается только transform, кадры — пока пятно не догнало цель.
+  if (!tiho && shiroko) {
+    $$('#geroj, .glava-temn, .forma-gl').forEach(sek => {
+      const sloj = document.createElement('div'), p = document.createElement('div');
+      sloj.className = 'svet-sloj'; sloj.setAttribute('aria-hidden', 'true'); p.className = 'svet-pyatno'; sloj.appendChild(p);
+      const dysh = sek.id === 'geroj';   // дышит только у сцены IVAN; в тёмных главах без курсора — стоит у заголовка
+      sek.classList.add('svet'); if (dysh) sek.classList.add('dyshit'); sek.prepend(sloj);
+      const doma = () => { const z = sek.id === 'geroj' ? $('#scena') : $('h2', sek), r = (z || sek).getBoundingClientRect(), s = sek.getBoundingClientRect();
+        return [r.left - s.left + r.width / 2, r.top - s.top + r.height / 2]; };
+      let [x, y] = doma(), [cx, cy] = [x, y], raf = 0, nad = false, pred = 0;
+      const stavit = () => { p.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`; };
+      // догоняет по времени, не по кадрам: 12 % пути за 1/60 с — и на медленной машине пятно не вязнет (proba-vid12 под нагрузкой: отстало на 77 px)
+      const shag = t => { const d = 1 - Math.pow(.88, Math.min(t - (pred || t - 16.7), 100) / 16.7); pred = t;
+        x += (cx - x) * d; y += (cy - y) * d; stavit(); raf = Math.abs(cx - x) + Math.abs(cy - y) > .5 ? requestAnimationFrame(shag) : (pred = 0); };
+      const k = () => { if (!raf) raf = requestAnimationFrame(shag); };
+      stavit();
+      if (mysh) {
+        sek.addEventListener('pointermove', e => { const s = sek.getBoundingClientRect(); cx = e.clientX - s.left; cy = e.clientY - s.top;
+          if (!nad) { nad = true; sek.classList.remove('dyshit'); } k(); }, { passive: true });
+        sek.addEventListener('pointerleave', () => { nad = false; [cx, cy] = doma(); if (dysh) sek.classList.add('dyshit'); k(); });
+      }
+      addEventListener('resize', () => { if (!nad) { [cx, cy] = doma(); k(); } });
+      addEventListener('load', () => { if (!nad) { [cx, cy] = doma(); k(); } });   // шрифты и сцена могли сдвинуть место «дома»
+    });
+  }
+  // п. 2 · заголовки глав — по словам. Читалка экрана слышит заголовок целиком (aria-label), слова-кусочки ей не видны.
+  $$('main section:not(#geroj) h2').forEach(h => {
+    const t = h.textContent.trim().replace(/\s+/g, ' '), slova = t.split(' ');
+    h.setAttribute('aria-label', t); h.textContent = '';
+    slova.forEach((w, i) => { if (i) h.append(' '); const s = document.createElement('span'); s.className = 'slovo'; s.setAttribute('aria-hidden', 'true');
+      s.style.setProperty('--i', i); s.textContent = w; h.append(s); });
+    h.style.setProperty('--n', slova.length); h.classList.add('zagl-slova');
+  });
+  if (!tiho && shiroko && 'IntersectionObserver' in window) {
+    const io6 = new IntersectionObserver(z => z.forEach(x => { if (x.isIntersecting) { io6.unobserve(x.target); x.target.classList.remove('zhdyot'); } }), { rootMargin: '0px 0px -10% 0px' });
+    $$('.zagl-slova').forEach(h => { if (h.getBoundingClientRect().top > innerHeight) { h.classList.add('zhdyot', 'idyot'); io6.observe(h); } });
+  }
+  // п. 3 · лента шаблонов едет сама: до конца, пауза, обратно (круг туда-обратно ≈ 30 с) — без копий карточек (их 15, и читалке
+  // экрана повторы не нужны). Стоит, пока над ней мышь, фокус или палец; после касания едет через 4 с, после колеса и ← → — через 3 с.
+  const lentaS = $('#lenta-sp');
+  if (lentaS && !tiho && shiroko && 'IntersectionObserver' in window) {
+    const obr = lentaS.closest('.lenta') || lentaS, KRUG = 30000;
+    let pos = lentaS.scrollLeft, napr = 1, stoit = false, pauza = 0, vidna = false, raf = 0, pred = 0;
+    const kadr = t => {
+      raf = 0; if (!vidna) return;
+      const dt = pred ? Math.min(t - pred, 64) : 16, put = lentaS.scrollWidth - lentaS.clientWidth; pred = t;
+      if (!stoit && put > 4 && t > pauza) {
+        if (Math.abs(lentaS.scrollLeft - pos) > 3) pos = lentaS.scrollLeft;   // листали рукой — едем оттуда
+        pos += napr * put * 2 / KRUG * dt;
+        if (pos >= put) { pos = put; napr = -1; pauza = t + 1500; } else if (pos <= 0) { pos = 0; napr = 1; pauza = t + 1500; }
+        lentaS.classList.add('edet-sama'); lentaS.scrollLeft = pos;
+      }
+      raf = requestAnimationFrame(kadr);
+    };
+    const stop = () => { stoit = true; lentaS.classList.remove('edet-sama'); };
+    const dalshe = ms => { stoit = false; pauza = performance.now() + ms; pos = lentaS.scrollLeft; };
+    obr.addEventListener('mouseenter', stop); obr.addEventListener('mouseleave', () => dalshe(600));
+    obr.addEventListener('focusin', stop); obr.addEventListener('focusout', () => dalshe(600));
+    lentaS.addEventListener('touchstart', stop, { passive: true }); lentaS.addEventListener('touchend', () => dalshe(4000), { passive: true });
+    lentaS.addEventListener('wheel', () => { pauza = performance.now() + 3000; }, { passive: true });
+    // лента сама вывозит карточки на виду — их миниатюры грузятся сразу, как только лента видна (иначе ленивая загрузка
+    // не всегда успевала: proba-raboty 2560 — 2 раза из 3 friseur-de-mal.jpg не загрузился)
+    new IntersectionObserver(z => { vidna = z[0].isIntersecting;
+      if (vidna) $$('img[loading=lazy]', lentaS).forEach(i => { i.loading = 'eager'; });
+      if (vidna && !raf) { pred = 0; raf = requestAnimationFrame(kadr); } }).observe(lentaS);
+  }
+
   // смена языка — тот же раздел: к ссылке языка дописывается якорь раздела, который сейчас на экране
   $$('.yazyki a[hreflang]').forEach(a => a.addEventListener('click', () => {
     if (a.getAttribute('aria-current')) return;
