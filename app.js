@@ -146,14 +146,23 @@
 
   // указатель глав
   const ukaz = $('.ukazatel');
-  if (ukaz && 'IntersectionObserver' in window) {
+  // 22-10 №13 п. 2: смотрим, что лежит ПОД указателем сейчас, а не какая глава входила в середину окна последней. Наблюдатель
+  // помнил тёмную главу и после возврата на первый экран — «Одна заявка» белым по светлому (снимок владельца 21-10).
+  if (ukaz) {
     const ssylki = $$('a', ukaz);
-    const io = new IntersectionObserver(zap => zap.forEach(z => {
-      if (!z.isIntersecting) return;
-      ssylki.forEach(a => a.classList.toggle('tek', a.dataset.k === z.target.dataset.k));
-      ukaz.classList.toggle('na-temnom', z.target.matches('.glava-temn, .forma-gl'));
-    }), { rootMargin: '-45% 0px -50% 0px' });
-    $$('section[data-k], #analyse').forEach(s => io.observe(s));
+    let zhdyot = 0;
+    const svetit = () => {
+      zhdyot = 0;
+      const r = ukaz.getBoundingClientRect();
+      if (!r.width) return;
+      const pod = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).find(el => !ukaz.contains(el));
+      const gl = pod && pod.closest('section[data-k], #analyse');
+      ssylki.forEach(a => a.classList.toggle('tek', !!gl && a.dataset.k === gl.dataset.k));
+      ukaz.classList.toggle('na-temnom', !!(pod && pod.closest('.glava-temn, .forma-gl')));
+    };
+    const pozzhe = () => { if (!zhdyot) zhdyot = requestAnimationFrame(svetit); };
+    addEventListener('scroll', pozzhe, { passive: true }); addEventListener('resize', pozzhe); addEventListener('load', pozzhe);
+    svetit();
   }
 
   // первый экран: заявка салона проходит I → V → A → N один раз. Нарисовано на canvas — это картинка-пример,

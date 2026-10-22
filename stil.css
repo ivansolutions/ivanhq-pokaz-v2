@@ -769,16 +769,20 @@ html.tema-menyaetsya, html.tema-menyaetsya * { transition: background-color .35s
   .nishi-geroj { grid-template-columns: repeat(4, 1fr); max-width: none; }
   .nishi-geroj .nisha > summary { grid-template-columns: 20px 1fr 18px; gap: 8px; padding: 6px 10px; }
   .nishi-geroj .nisha > summary svg { width: 20px; height: 20px; }
-  .nishi-geroj .nisha[open] { position: relative; z-index: 3; }
 }
 .frazy-sv > .frazy-z { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
 .frazy-sv > .frazy-z::-webkit-details-marker { display: none; }
 .frazy-sv[open] > .frazy-z { margin-bottom: 8px; }
+/* 22-10 №13 п. 1 · примеры ниши раздвигают сетку, а не лежат поверх. Поверх не держалось: плитка под мышью поднимается
+   (transform из №12), это свой слой — z-index списка запирался в нём, и соседняя плитка ложилась сверху (снимок владельца 21-10,
+   1718×1270). Раздвинутая сетка не перекрывает ни плиток, ни кнопки ни на какой ширине. Глава = окно — в закрытом виде;
+   раскрытая плитка удлиняет первый экран, а не режется им. Соседняя плитка в ряду не тянется за раскрытой. */
+/* закрытые — ряды одной высоты (строка ниже, «плитки одной высоты»); пока одна раскрыта — ряды по содержимому, сосед не тянется */
+.nishi-geroj:has(.nisha[open]) { grid-auto-rows: auto !important; align-items: start; }
+/* строки примеров внутри плитки — тоже li внутри .nishi: подъём при наведении (№12) им не положен, иначе строка наезжает на соседнюю */
+.nishi .nisha-bsp li { transform: none !important; }
 @media (min-width: 1024px) {
-  /* примеры ниши раскрываются поверх, а не раздвигают первый экран (его высота — ровно окно) */
-  .nishi-geroj .nisha { position: relative; }
-  .nishi-geroj .nisha[open] { z-index: 4; }
-  .nishi-geroj .nisha[open] > .nisha-bsp { position: absolute; left: -1px; right: -1px; top: calc(100% - 6px); margin: 0; padding: 10px 12px 12px; background: var(--bel); border: 1px solid var(--linia); border-top: 0; border-radius: 0 0 var(--r-2) var(--r-2); box-shadow: var(--ten-3); }
+  .geroj:has(.nishi-geroj .nisha[open]) { height: auto; min-height: calc(100svh - var(--verh)); }
 }
 @media (min-width: 1024px) and (max-height: 800px) {
   /* схема примера на низком окне — квадраты как на телефоне (48 px), линия по их середине */
@@ -870,8 +874,6 @@ html.tema-menyaetsya, html.tema-menyaetsya * { transition: background-color .35s
   :root { interpolate-size: allow-keywords; }
   details::details-content { height: 0; overflow: clip; transition: height .25s ease, content-visibility .25s allow-discrete; }
   details[open]::details-content { height: auto; }
-  /* примеры ниш на ПК раскрываются поверх (абсолютно) — их не обрезать */
-  @media (min-width: 1024px) { .nishi-geroj .nisha::details-content { height: auto; overflow: visible; transition: none; } }
 }
 .plyus { transition: transform .25s ease; }
 details[open] > summary .plyus { transform: rotate(180deg); }
@@ -945,3 +947,11 @@ html[data-tema="sinyaya"] .svet, .glava-temn.svet, .forma-gl.svet { --svet-c: rg
 .lenta .shablony { margin-top: -8px; }          /* …а глава от этого не выше (глава = окно, proba-okno 20-10: было +8 px) */
 @media (prefers-reduced-motion: reduce) { .svet-sloj { display: none; } .zagl-slova .slovo, .zagl-slova::after { opacity: 1 !important; transform: none !important; transition: none !important; } }
 @media (max-width: 767px) { .svet-sloj { display: none; } }
+
+/* 22-10 №13 п. 3 · высокое окно ПК (≥ 1001 px): первый экран — содержимое и цифры одним блоком по центру окна, воздух сверху = снизу.
+   Было: текст по центру растянутой середины, цифры прижаты вниз — над заголовком 200+ px пустоты (снимок владельца 1718×1270). */
+@media (min-width: 1024px) and (min-height: 1001px) {
+  .geroj { justify-content: center; padding: clamp(24px, 3svh, 48px) 0; gap: clamp(32px, 5svh, 64px); }
+  .geroj-v { flex: 0 0 auto; }
+  .geroj .schetchiki { margin-top: 0; }
+}
